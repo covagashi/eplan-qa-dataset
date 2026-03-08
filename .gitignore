@@ -1,0 +1,32 @@
+# === EPLAN source docs (proprietary, too large for git) ===
+Eplan_DOCS/
+
+# === API keys and secrets ===
+.env
+*.key
+*API_KEY*
+
+# === Intermediate/progress files ===
+json/progress*.json
+json/bash.exe.stackdump
+bash.exe.stackdump
+
+# === Partial datasets (keep only FINAL) ===
+json/eplan_qa_dataset.jsonl
+json/eplan_qa_enrichment.jsonl
+
+# === Python ===
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === IDE ===
+.vscode/
+.idea/
