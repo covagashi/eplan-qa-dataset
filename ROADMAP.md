@@ -10,10 +10,12 @@
 | 4. Merge & deduplicate | Done | 4,288 pairs (`eplan_qa_FINAL.jsonl`) |
 | 5. Upload to HuggingFace | Done | `covaga/eplan-qa-dataset` |
 | 6. First SFT run | Done | Qwen 2.5 3B, Kaggle T4, QLoRA |
-| **7. Code generation pass** | **Next** | ~500-1000 code pairs |
-| 8. Retrain with v2 dataset | Pending | Second SFT run |
-| 9. GGUF export | Pending | Ollama-ready model |
-| 10. MCP integration | Pending | RAG + fine-tuned model |
+| **7. Code generation pass** | **Next** | ~500-1000 code pairs (`generate_qa_code.py`) |
+| **8. Coverage pass** | **Next** | ~500-1000 new pairs from under-covered docs (`generate_qa_coverage.py`) |
+| 9. Merge into v2 | Pending | `eplan_qa_v2_FINAL.jsonl` (~5,500-6,300 pairs) |
+| 10. Retrain with v2 dataset | Pending | Second SFT run + loss curve plot |
+| 11. GGUF export | Pending | Ollama-ready model |
+| 12. MCP integration | Pending | RAG + fine-tuned model |
 
 ---
 
@@ -65,20 +67,86 @@ Same pipeline as `generate_qa_enrichment.py` but with:
 - Post-processing: validate every output has `using` statements and code blocks
 - Output: `json/eplan_qa_code.jsonl`
 
-### Merge into v2
+---
 
-After generation:
-1. Run `merge_datasets.py` with all 3 JSONL files
-2. Deduplicate by instruction similarity
-3. Output: `json/eplan_qa_v2_FINAL.jsonl`
-4. Expected total: ~5,000-5,300 pairs
+## Phase 8: Coverage Pass
+
+### Problem
+17,289 docs but only 4,288 Q&A → ~0.25 Q&A per doc. Many docs got 0 questions (skipped by batching, too short, or low-priority in Pass 1).
+
+### Goal
+Identify under-covered docs and generate additional Q&A to improve breadth.
+
+### Strategy
+1. **Detect gaps**: cross-reference `source` field in existing JSONL with all files in `Eplan_DOCS/`
+2. **Filter**: docs with 0 Q&A, or docs >500 chars that only produced 1 Q&A
+3. **Generate**: same general prompt as Pass 1 but ONLY on uncovered/under-covered docs
+4. **Target**: ~500-1000 new pairs across all categories
+
+### Script: `generate_qa_coverage.py`
+
+- Read existing JSONL to build set of covered `source` paths
+- Only process docs NOT in that set (or with <2 Q&A)
+- Same prompt as `generate_qa.py` (all categories welcome)
+- Output: `json/eplan_qa_coverage.jsonl`
 
 ---
 
-## Phase 8: Retrain with v2 Dataset
+## Phase 9: Merge into v2
+
+1. Merge all 4 JSONL files: base + enrichment + code + coverage
+2. Deduplicate by instruction similarity
+3. Output: `json/eplan_qa_v2_FINAL.jsonl`
+4. Expected total: ~5,500-6,300 pairs
+5. Upload v2 to HuggingFace Hub
+
+---
+
+## Phase 6 Results: First SFT Run
+
+### Training Log
+| Step | Loss |
+|------|------|
+| 10 | 0.7922 |
+| 20 | 0.6844 |
+| 30 | 0.6412 |
+| 40 | 0.6380 |
+| 50 | 0.5510 |
+| 60 | 0.5357 |
+| 70 | 0.5355 |
+| 80 | 0.5013 |
+| 90 | 0.4878 |
+| 100 | 0.3906 |
+| 110 | 0.3885 |
+| 120 | 0.4429 |
+
+- **Final avg loss**: 0.5427
+- **Runtime**: 4,006s (~67 min)
+- **Steps**: 129 (3 epochs)
+
+### Analysis
+- **Steps 10-50**: Fast learning (model learns EPLAN domain)
+- **Steps 60-110**: Plateau (~0.39-0.53, model converged)
+- **Step 120**: Loss rises to 0.44 — early sign of **overfitting**
+- **Conclusion**: 3 epochs was slightly too many. 2 epochs is the sweet spot.
+
+### Lessons for Phase 8
+- Use `num_train_epochs=2` instead of 3
+- Add train/eval split (90/10) to monitor overfitting with eval_loss
+- Use `save_strategy="steps"` + `save_steps=40` for intermediate checkpoints
+- Keep `per_device_train_batch_size=1` + `gradient_accumulation_steps=8` (T4 VRAM constraint)
+
+---
+
+## Phase 10: Retrain with v2 Dataset
 
 - Same setup: Qwen 2.5 3B, Kaggle T4 x2, QLoRA
-- Same hyperparameters (unless v1 showed issues)
+- **Changed hyperparameters** based on v1 results:
+  - `num_train_epochs=2` (was 3, overfitting detected)
+  - `save_strategy="steps"`, `save_steps=40`
+  - Train/eval split 90/10
+  - `eval_strategy="steps"`, `eval_steps=40`
+- **Plot loss curve** after training (train_loss + eval_loss) to verify no overfitting
 - Compare v1 vs v2 on:
   - Code completeness (has imports, error handling?)
   - API accuracy (uses real EPLAN methods?)
@@ -86,7 +154,7 @@ After generation:
 
 ---
 
-## Phase 9: GGUF Export
+## Phase 11: GGUF Export
 
 Options:
 - **Option A**: llama.cpp `convert_hf_to_gguf.py` locally
@@ -95,7 +163,7 @@ Options:
 
 ---
 
-## Phase 10: MCP Server Integration
+## Phase 12: MCP Server Integration
 
 Combine fine-tuned model + RAG for maximum accuracy:
 - **Fine-tuned model** → knows EPLAN domain, writes code patterns, understands terminology
