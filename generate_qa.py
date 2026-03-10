@@ -15,8 +15,8 @@ from google import genai
 
 # --- CONFIG ---
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-DOCS_DIR = Path(r"C:\Users\daviann\Documents\_yo\_mantenimiento\Eplan training\Eplan_DOCS")
-OUTPUT_DIR = Path(r"C:\Users\daviann\Documents\_yo\_mantenimiento\Eplan training\json")
+DOCS_DIR = Path(r"C:\Uplan training\Eplan_DOCS")
+OUTPUT_DIR = Path(r"C:\Eplan training\json")
 OUTPUT_FILE = OUTPUT_DIR / "eplan_qa_dataset.jsonl"
 PROGRESS_FILE = OUTPUT_DIR / "progress.json"
 BATCH_CHAR_LIMIT = 500_000

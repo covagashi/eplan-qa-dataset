@@ -33,15 +33,18 @@ Eplan training/
 - [x] Phase 2: Generate base Q&A dataset (4,013 pairs)
 - [x] Phase 3: Enrichment pass - procedural/troubleshooting (454 pairs)
 - [x] Phase 4: Merge & deduplicate (4,288 final pairs)
-- [ ] Phase 5: Upload dataset to Hugging Face Hub
-- [ ] Phase 6: Fine-tune with SFT (LoRA/QLoRA) on 7B model
-- [ ] Phase 7: Convert to GGUF for Ollama
-- [ ] Phase 8: Integrate with EPLAN MCP server (RAG + fine-tuned model)
+- [x] Phase 5: Upload dataset to Hugging Face Hub
+- [x] Phase 6: First SFT run — Qwen 2.5 3B on Kaggle T4 (QLoRA, no Unsloth)
+- [ ] Phase 7: Code generation pass (~500-1000 pairs) — see ROADMAP.md
+- [ ] Phase 8: Retrain with code-enriched dataset v2
+- [ ] Phase 9: Convert to GGUF for Ollama
+- [ ] Phase 10: Integrate with EPLAN MCP server (RAG + fine-tuned model)
 
 ## Tech Stack
 - Python 3.12 on Windows 10
 - Gemini API (free tier) for Q&A generation
-- Target fine-tune: Hugging Face TRL (SFT) on cloud GPUs
+- Fine-tune: HuggingFace TRL (SFT) + PEFT (QLoRA) on Kaggle T4 x2
+- Base model: Qwen 2.5 3B Instruct
 - Target inference: Ollama (local GGUF)
 - Integration: existing MCP server at `Eplan_2026_IA_MCP_scripts/`
 
