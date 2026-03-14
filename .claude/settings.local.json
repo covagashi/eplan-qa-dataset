@@ -2,7 +2,29 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "WebFetch(domain:ai.google.dev)"
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(grep -r '```' \"C:/Users/daviann/Documents/_yo/_PORTFOLIO/Eplan training/Eplan_DOCS/\" --include=\"*.md\" | wc -l)",
+      "Bash(grep -r '```' \"C:/Users/daviann/Documents/_yo/_PORTFOLIO/Eplan training/Eplan_DOCS/User Guide\" --include=\"*.md\" | wc -l)",
+      "Bash(grep -r '```' \"C:/Users/daviann/Documents/_yo/_PORTFOLIO/Eplan training/Eplan_DOCS/API Reference\" --include=\"*.md\" | wc -l)",
+      "Bash(find \"C:/Users/daviann/Documents/_yo/_PORTFOLIO/Eplan training/Eplan_DOCS/\" -type f -name \"*.md\" | shuf | head -5 | xargs -I {} sh -c 'echo \"=== {} ===\" && head -80 \"{}\"')",
+      "Bash(grep -r '```csharp\\\\|```cs\\\\|```C#' \"C:/Users/daviann/Documents/_yo/_PORTFOLIO/Eplan training/Eplan_DOCS/\" --include=\"*.md\" | wc -l)",
+      "Bash(find \"C:/Users/daviann/Documents/_yo/_PORTFOLIO/Eplan training/Eplan_DOCS/User Guide\" -type f -name \"*.md\" -exec grep -l '```' {} \\\\; | head -20)",
+      "Bash(cd \"C:\\\\Users\\\\daviann\\\\Documents\\\\_yo\\\\_PORTFOLIO\\\\Eplan training\" && mkdir -p scripts notebooks)",
+      "Bash(cd \"C:\\\\Users\\\\daviann\\\\Documents\\\\_yo\\\\_PORTFOLIO\\\\Eplan training\" && mv generate_qa.py generate_qa_code.py generate_qa_coverage.py generate_qa_enrichment.py merge_datasets.py merge_datasets_v2.py scripts/ && mv finetune_kaggle.ipynb notebooks/ && rm \"Nuevo documento de texto.txt\" bash.exe.stackdump)",
+      "Bash(cd \"C:\\\\Users\\\\daviann\\\\Documents\\\\_yo\\\\_PORTFOLIO\\\\Eplan training\\\\scripts\" && sed -i 's|BASE_DIR = Path\\(__file__\\).resolve\\(\\).parent$|BASE_DIR = Path\\(__file__\\).resolve\\(\\).parent.parent|' generate_qa_code.py generate_qa_coverage.py merge_datasets_v2.py)",
+      "Bash(cd \"C:\\\\Users\\\\daviann\\\\Documents\\\\_yo\\\\_PORTFOLIO\\\\Eplan training\\\\scripts\" && sed -i 's|DOCS_DIR = Path\\(r\"C:\\\\\\\\Uplan training\\\\\\\\Eplan_DOCS\"\\)|BASE_DIR = Path\\(__file__\\).resolve\\(\\).parent.parent\\\\nDOCS_DIR = BASE_DIR / \"Eplan_DOCS\"|' generate_qa.py && sed -i 's|OUTPUT_DIR = Path\\(r\"C:\\\\\\\\Eplan training\\\\\\\\json\"\\)|OUTPUT_DIR = BASE_DIR / \"json\"|' generate_qa.py)",
+      "Bash(cd \"C:\\\\Users\\\\daviann\\\\Documents\\\\_yo\\\\_PORTFOLIO\\\\Eplan training\\\\scripts\" && sed -i 's|DOCS_DIR = Path\\(r\"C:\\\\\\\\Users\\\\\\\\daviann\\\\\\\\Documents\\\\\\\\_yo_\\\\\\\\mantenimiento\\\\\\\\Eplan training\\\\\\\\Eplan_DOCS\"\\)|BASE_DIR = Path\\(__file__\\).resolve\\(\\).parent.parent\\\\nDOCS_DIR = BASE_DIR / \"Eplan_DOCS\"|' generate_qa_enrichment.py && sed -i 's|OUTPUT_DIR = Path\\(r\"C:\\\\\\\\Users\\\\\\\\daviann\\\\\\\\Documents\\\\\\\\_yo_\\\\\\\\mantenimiento\\\\\\\\Eplan training\\\\\\\\json\"\\)|OUTPUT_DIR = BASE_DIR / \"json\"|' generate_qa_enrichment.py)",
+      "Bash(where jq:*)",
+      "Read(//usr/bin/**)",
+      "Bash(winget install:*)",
+      "Bash(cd \"C:\\\\Users\\\\daviann\\\\Documents\\\\_yo\\\\_PORTFOLIO\\\\Eplan training\" && python scripts/merge_datasets_v2.py)",
+      "Bash(pip show:*)",
+      "Bash(cd \"C:\\\\Users\\\\daviann\\\\Documents\\\\_yo\\\\_PORTFOLIO\\\\Eplan training\" && python -c \"\nfrom huggingface_hub import HfApi\napi = HfApi\\(\\)\napi.upload_file\\(\n    path_or_fileobj='json/eplan_qa_v2_FINAL.jsonl',\n    path_in_repo='eplan_qa_v2_FINAL.jsonl',\n    repo_id='covaga/eplan-qa-dataset',\n    repo_type='dataset',\n\\)\nprint\\('Uploaded eplan_qa_v2_FINAL.jsonl to covaga/eplan-qa-dataset'\\)\n\")",
+      "Bash(python -c \"from huggingface_hub import HfApi; api = HfApi\\(\\); print\\(api.whoami\\(\\)['name']\\)\" 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\daviann\\\\Documents\\\\_yo\\\\_PORTFOLIO\\\\Eplan training\" && python -c \"\nfrom huggingface_hub import HfApi\napi = HfApi\\(\\)\nprint\\(api.whoami\\(\\)['name']\\)\n\")",
+      "Bash(cd \"C:\\\\Users\\\\daviann\\\\Documents\\\\_yo\\\\_PORTFOLIO\\\\Eplan training\" && python -c \"\nfrom huggingface_hub import HfApi\napi = HfApi\\(\\)\napi.upload_file\\(\n    path_or_fileobj='json/eplan_qa_v2_FINAL.jsonl',\n    path_in_repo='eplan_qa_v2_FINAL.jsonl',\n    repo_id='covaga/eplan-qa-dataset',\n    repo_type='dataset',\n    commit_message='Add v2 dataset: 5,116 Q&A pairs \\(base + enrichment + code + coverage\\)',\n\\)\nprint\\('Done! eplan_qa_v2_FINAL.jsonl uploaded'\\)\n\")",
+      "Bash(python -c \"from huggingface_hub import HfApi; api = HfApi\\(\\); info = api.whoami\\(\\); print\\(f'User: {info[\\\\\"name\\\\\"]}'\\); print\\(f'Type: {info.get\\(\\\\\"type\\\\\", \\\\\"unknown\\\\\"\\)}'\\); print\\(f'Plan: {info.get\\(\\\\\"plan\\\\\", {}\\).get\\(\\\\\"name\\\\\", \\\\\"unknown\\\\\"\\) if isinstance\\(info.get\\(\\\\\"plan\\\\\"\\), dict\\) else info.get\\(\\\\\"plan\\\\\", \\\\\"unknown\\\\\"\\)}'\\)\")",
+      "Bash(cd \"C:\\\\Users\\\\daviann\\\\Documents\\\\_yo\\\\_PORTFOLIO\\\\Eplan training\" && python -c \"\nfrom huggingface_hub import HfApi\napi = HfApi\\(\\)\napi.upload_file\\(\n    path_or_fileobj='space/app.py',\n    path_in_repo='app.py',\n    repo_id='covaga/eplan-assistant',\n    repo_type='space',\n\\)\nprint\\('Updated app.py with float16'\\)\n\")"
     ]
   }
 }

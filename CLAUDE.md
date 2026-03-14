@@ -10,9 +10,15 @@ Eplan training/
 ├── Eplan_DOCS/              # Source docs (17K .md files, NOT in git)
 ├── json/
 │   └── eplan_qa_FINAL.jsonl # Merged & deduplicated dataset (4,288 Q&A pairs)
-├── generate_qa.py           # Pass 1: general Q&A generation via Gemini API
-├── generate_qa_enrichment.py# Pass 2: troubleshooting/procedural/conceptual focus
-├── merge_datasets.py        # Combine + deduplicate + stats
+├── scripts/
+│   ├── generate_qa.py           # Pass 1: general Q&A generation via Gemini API
+│   ├── generate_qa_enrichment.py# Pass 2: troubleshooting/procedural/conceptual focus
+│   ├── generate_qa_code.py      # Pass 3: code-focused Q&A (Phase 7)
+│   ├── generate_qa_coverage.py  # Pass 4: coverage gap fill (Phase 8)
+│   ├── merge_datasets.py        # Combine + deduplicate + stats (v1)
+│   └── merge_datasets_v2.py     # Merge all passes into v2 dataset
+├── notebooks/
+│   └── finetune_kaggle.ipynb    # Kaggle fine-tuning notebook
 └── CLAUDE.md
 ```
 
@@ -35,10 +41,12 @@ Eplan training/
 - [x] Phase 4: Merge & deduplicate (4,288 final pairs)
 - [x] Phase 5: Upload dataset to Hugging Face Hub
 - [x] Phase 6: First SFT run — Qwen 2.5 3B on Kaggle T4 (QLoRA, no Unsloth)
-- [ ] Phase 7: Code generation pass (~500-1000 pairs) — see ROADMAP.md
-- [ ] Phase 8: Retrain with code-enriched dataset v2
-- [ ] Phase 9: Convert to GGUF for Ollama
-- [ ] Phase 10: Integrate with EPLAN MCP server (RAG + fine-tuned model)
+- [x] Phase 7: Code generation pass (120 pairs)
+- [x] Phase 8: Coverage pass (708 pairs)
+- [x] Phase 9: Merge v2 dataset (5,116 pairs) + upload to HF
+- [ ] Phase 10: Retrain with v2 dataset (notebook ready, run on Kaggle)
+- [ ] Phase 11: Convert to GGUF for Ollama
+- [ ] Phase 12: Integrate with EPLAN MCP server (RAG + fine-tuned model)
 
 ## Tech Stack
 - Python 3.12 on Windows 10

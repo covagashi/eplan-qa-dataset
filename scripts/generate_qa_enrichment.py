@@ -1,10 +1,10 @@
 """
-Pipeline para generar Q&A con Gemini a partir de docs EPLAN.
-Ajusta GEMINI_API_KEY antes de ejecutar.
+Segunda pasada: enriquecer dataset con Q&A procedurales, troubleshooting y conceptuales.
+Reutiliza los mismos docs pero con prompt que PROHIBE api_reference factuales.
 
 Uso:
-    python generate_qa.py              # procesa todo desde el principio
-    python generate_qa.py --resume     # continua desde el ultimo batch completado
+    python generate_qa_enrichment.py              # desde el principio
+    python generate_qa_enrichment.py --resume      # continuar donde se quedo
 """
 import os
 import json
@@ -15,53 +15,62 @@ from google import genai
 
 # --- CONFIG ---
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-DOCS_DIR = Path(r"C:\Uplan training\Eplan_DOCS")
-OUTPUT_DIR = Path(r"C:\Eplan training\json")
-OUTPUT_FILE = OUTPUT_DIR / "eplan_qa_dataset.jsonl"
-PROGRESS_FILE = OUTPUT_DIR / "progress.json"
+BASE_DIR = Path(__file__).resolve().parent.parent
+DOCS_DIR = BASE_DIR / "Eplan_DOCS"
+OUTPUT_DIR = BASE_DIR / "json"
+OUTPUT_FILE = OUTPUT_DIR / "eplan_qa_enrichment.jsonl"
+PROGRESS_FILE = OUTPUT_DIR / "progress_enrichment.json"
 BATCH_CHAR_LIMIT = 500_000
 MODEL = "gemini-2.0-flash-lite"
 
 SYSTEM_PROMPT = """You are an expert training dataset generator for fine-tuning LLMs specialized in industrial electrical engineering with EPLAN Electric P8.
 
 ## YOUR TASK
-From the EPLAN documentation provided, generate high-quality Question-Answer (Q&A) pairs in English in JSONL format.
-These pairs will be used to fine-tune a language model that acts as an EPLAN technical assistant.
+From the EPLAN documentation provided, generate Q&A pairs focused EXCLUSIVELY on practical usage, problem-solving, and deeper understanding.
+
+IMPORTANT: Do NOT generate simple factual questions like "What does class X do?" or "What parameters does method Y accept?". Those already exist in the dataset. Instead, generate ONLY these types:
+
+## REQUIRED Q&A TYPES (generate 3-6 per document fragment)
+
+1. **TROUBLESHOOTING** (40% of output): Real problems an engineer would face.
+   - "Why does my script throw an exception when trying to access project properties after closing the project?"
+   - "I'm getting a NullReferenceException when iterating over pages. What could cause this?"
+   - "My export action hangs without producing output. How do I diagnose this?"
+
+2. **PROCEDURAL / HOW-TO** (30% of output): Step-by-step workflows combining multiple API calls.
+   - "How do I create a complete workflow to export all pages of a project to PDF programmatically?"
+   - "What is the correct sequence of API calls to create a new device, place it on a page, and assign an article number?"
+   - "How do I automate batch processing of multiple EPLAN projects?"
+
+3. **CONCEPTUAL / ARCHITECTURAL** (20% of output): Understanding the big picture.
+   - "What is the relationship between Project, Page, and Placement in the EPLAN object model?"
+   - "How does EPLAN's transaction model work and why should I use it?"
+   - "What is the difference between a Function and a FunctionBase in the EPLAN API?"
+
+4. **BEST PRACTICES** (10% of output): Expert-level advice.
+   - "What are the best practices for error handling in EPLAN API scripts?"
+   - "How should I structure a large EPLAN automation script for maintainability?"
+   - "When should I use actions vs direct API calls in EPLAN automation?"
 
 ## OUTPUT FORMAT
-Each line is an independent JSON. Use EXACTLY this format, respond in ENGLISH:
+Each line is one JSON. EXACTLY this format:
 
-{"instruction": "question here in English", "output": "answer here in English", "source": "path/to/file.md", "category": "category"}
+{"instruction": "question in English", "output": "detailed answer in English", "source": "path/to/file.md", "category": "category"}
 
-Valid categories:
-- api_reference (API classes, methods, properties)
-- user_guide (workflows, configuration, general usage)
-- troubleshooting (common errors, solutions)
-- conceptual (what is X, how does Y work, differences between)
-- procedural (step by step to achieve something)
-- masterdata (master data, articles, macros)
-
-## TYPES OF QUESTIONS TO GENERATE
-For each documentation fragment, generate between 3 and 8 varied Q&A pairs. Mix these types:
-1. Direct factual: "What does class X do?" / "What parameters does method Y accept?"
-2. Procedural: "How do I create a new schematic in EPLAN?"
-3. Problem solving: "Why does error X appear when doing Y?"
-4. Comparative: "What is the difference between X and Y in EPLAN?"
-5. Best practices: "What is the recommended way to...?"
-6. Integration/API: "How do I programmatically access...?"
+Valid categories: troubleshooting, procedural, conceptual, best_practices
 
 ## QUALITY RULES
-- Answers must be COMPLETE and SELF-SUFFICIENT (never say "see documentation").
-- Include exact names of classes, methods, properties, actions when applicable.
-- If the document contains code, include code snippets in the answer.
-- Questions must be realistic, as a real electrical engineer would ask them.
-- Do NOT generate trivial questions like "What is EPLAN?".
-- All Q&A must be 100% in ENGLISH.
-- Do NOT invent information that is not in the source document.
-- Prefer QUALITY over QUANTITY. 3 excellent pairs are better than 8 mediocre ones.
+- Answers must be DETAILED (minimum 3-4 sentences, include code examples when relevant)
+- Questions must sound like a real engineer asking for help, not a textbook quiz
+- Answers should explain the WHY, not just the WHAT
+- Include common pitfalls and edge cases in troubleshooting answers
+- For procedural answers, include complete code examples when possible
+- Do NOT generate api_reference category — that's already covered
+- Do NOT invent information not present in the source documents
+- ALL output in ENGLISH
 
 ## PROCESS
-Return ONLY plain JSONL text. No markdown formatting (no ```), no additional explanations. Each line one valid JSON.
+Return ONLY plain JSONL text. No markdown formatting, no explanations. Each line one valid JSON.
 """
 
 # --- INIT ---
@@ -69,13 +78,11 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 
 
 def collect_files():
-    """Recopila todos los .md y .csv."""
     files = sorted(DOCS_DIR.rglob("*.md")) + sorted(DOCS_DIR.rglob("*.csv"))
     return files
 
 
 def make_batches(files):
-    """Agrupa archivos en batches que no excedan el limite de caracteres."""
     batches = []
     current_batch = []
     current_size = 0
@@ -108,7 +115,6 @@ def make_batches(files):
 
 
 def load_progress():
-    """Carga el progreso guardado."""
     if PROGRESS_FILE.exists():
         try:
             with open(PROGRESS_FILE, encoding="utf-8") as f:
@@ -119,13 +125,11 @@ def load_progress():
 
 
 def save_progress(progress):
-    """Guarda el progreso."""
     with open(PROGRESS_FILE, "w", encoding="utf-8") as f:
         json.dump(progress, f, indent=2)
 
 
 def process_batch(batch_content, batch_num, total_batches):
-    """Envia un batch a Gemini y parsea el JSONL resultante."""
     joined = "".join(batch_content)
     print(f"\n[Batch {batch_num}/{total_batches}] Enviando {len(joined):,} chars...")
 
@@ -136,7 +140,7 @@ def process_batch(batch_content, batch_num, total_batches):
                 model=MODEL,
                 contents=f"{SYSTEM_PROMPT}\n\n{joined}",
                 config={
-                    "temperature": 0.2,
+                    "temperature": 0.4,  # Un poco mas creativo para troubleshooting
                     "max_output_tokens": 65536,
                 }
             )
@@ -146,13 +150,13 @@ def process_batch(batch_content, batch_num, total_batches):
             print(f"  Intento {attempt + 1}/{max_retries} fallo: {e}")
             if attempt < max_retries - 1:
                 wait = 30 * (attempt + 1)
-                print(f"  Esperando {wait}s antes de reintentar...")
+                print(f"  Esperando {wait}s...")
                 time.sleep(wait)
             else:
                 print(f"  -> FALLO DEFINITIVO en batch {batch_num}")
                 return []
 
-    # Limpiar posible markdown que Gemini a veces devuelve
+    # Limpiar markdown
     if text.startswith("```"):
         first_newline = text.index("\n") if "\n" in text else 3
         text = text[first_newline + 1:]
@@ -160,9 +164,10 @@ def process_batch(batch_content, batch_num, total_batches):
         text = text[:-3]
     text = text.strip()
 
-    # Parsear lineas JSONL validas
+    # Parsear JSONL
     qa_pairs = []
     bad_lines = 0
+    api_ref_filtered = 0
     for line in text.split("\n"):
         line = line.strip()
         if not line:
@@ -170,6 +175,10 @@ def process_batch(batch_content, batch_num, total_batches):
         try:
             obj = json.loads(line)
             if "instruction" in obj and "output" in obj:
+                # Filtrar si Gemini ignora el prompt y genera api_reference
+                if obj.get("category") == "api_reference":
+                    api_ref_filtered += 1
+                    continue
                 qa_pairs.append(obj)
             else:
                 bad_lines += 1
@@ -178,7 +187,9 @@ def process_batch(batch_content, batch_num, total_batches):
 
     print(f"  -> {len(qa_pairs)} Q&A validos", end="")
     if bad_lines:
-        print(f" ({bad_lines} lineas descartadas)", end="")
+        print(f" ({bad_lines} descartadas)", end="")
+    if api_ref_filtered:
+        print(f" ({api_ref_filtered} api_reference filtradas)", end="")
     print()
 
     return qa_pairs
@@ -221,7 +232,6 @@ def main():
                 out.flush()
                 save_progress(progress)
 
-                # Rate limiting
                 if i < len(batches):
                     time.sleep(4)
 
@@ -232,8 +242,8 @@ def main():
                 time.sleep(30)
 
     print(f"\n{'='*50}")
-    print(f"TERMINADO")
-    print(f"  Total Q&A generados: {progress['total_qa']}")
+    print(f"ENRICHMENT TERMINADO")
+    print(f"  Q&A nuevos generados: {progress['total_qa']}")
     print(f"  Archivo: {OUTPUT_FILE}")
     if progress["errors"]:
         print(f"  Batches con error: {len(progress['errors'])}")

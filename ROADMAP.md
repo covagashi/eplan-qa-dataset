@@ -10,12 +10,15 @@
 | 4. Merge & deduplicate | Done | 4,288 pairs (`eplan_qa_FINAL.jsonl`) |
 | 5. Upload to HuggingFace | Done | `covaga/eplan-qa-dataset` |
 | 6. First SFT run | Done | Qwen 2.5 3B, Kaggle T4, QLoRA |
-| **7. Code generation pass** | **Next** | ~500-1000 code pairs (`generate_qa_code.py`) |
-| **8. Coverage pass** | **Next** | ~500-1000 new pairs from under-covered docs (`generate_qa_coverage.py`) |
-| 9. Merge into v2 | Pending | `eplan_qa_v2_FINAL.jsonl` (~5,500-6,300 pairs) |
-| 10. Retrain with v2 dataset | Pending | Second SFT run + loss curve plot |
-| 11. GGUF export | Pending | Ollama-ready model |
-| 12. MCP integration | Pending | RAG + fine-tuned model |
+| 7. Code generation pass | Done | 120 code pairs (`generate_qa_code.py`) |
+| 8. Coverage pass | Done | 708 new pairs from under-covered docs (`generate_qa_coverage.py`) |
+| 9. Merge into v2 | Done | 5,116 pairs (`eplan_qa_v2_FINAL.jsonl`) — 292 dupes removed |
+| 9b. Upload v2 to HuggingFace | Done | `covaga/eplan-qa-dataset/eplan_qa_v2_FINAL.jsonl` |
+| 10. Retrain with v2 dataset | Done | 1,152 steps, 2 epochs, 5.5h, loss 1.85→0.37, bf16 |
+| 10b. Push to HuggingFace | Done | `covaga/eplan-assistant-v2-lora` + `covaga/eplan-assistant-v2-merged` |
+| 10c. HF Spaces demo | Done | `https://huggingface.co/spaces/covaga/eplan-assistant` |
+| 11. GGUF export | Pending | Convert merged → GGUF Q4_K_M for Ollama |
+| **12. MCP integration** | **Next** | RAG + fine-tuned model |
 
 ---
 
@@ -138,19 +141,40 @@ Identify under-covered docs and generate additional Q&A to improve breadth.
 
 ---
 
-## Phase 10: Retrain with v2 Dataset
+## Phase 10 Results: v2 SFT Run
 
-- Same setup: Qwen 2.5 3B, Kaggle T4 x2, QLoRA
-- **Changed hyperparameters** based on v1 results:
-  - `num_train_epochs=2` (was 3, overfitting detected)
-  - `save_strategy="steps"`, `save_steps=40`
-  - Train/eval split 90/10
-  - `eval_strategy="steps"`, `eval_steps=40`
-- **Plot loss curve** after training (train_loss + eval_loss) to verify no overfitting
-- Compare v1 vs v2 on:
-  - Code completeness (has imports, error handling?)
-  - API accuracy (uses real EPLAN methods?)
-  - Troubleshooting depth
+### Training Config
+- Qwen 2.5 3B, Kaggle T4 x2, QLoRA, **bf16**
+- `num_train_epochs=2`, `batch_size=1`, `grad_accum=8`
+- `save_steps=40`, `adamw_8bit`, `lr=2e-4`
+- No eval during training (OOM on T4 with eval)
+
+### Training Log
+- **1,152 steps**, 5.5 hours
+- Loss: 1.85 (start) → 0.36 (min at step 1060) → 0.40 (final)
+- Avg loss: 0.5167
+- No significant overfitting in epoch 2
+
+### v1 vs v2 Comparison
+| Metric | v1 (4,288 pairs) | v2 (5,116 pairs) |
+|--------|------------------|------------------|
+| Epochs | 3 | 2 |
+| Steps | 129 | 1,152 |
+| Min loss | 0.39 | 0.36 |
+| Final loss | 0.44 (overfitting) | 0.40 (stable) |
+| Precision | fp16 | bf16 |
+| Runtime | 67 min | 5.5h |
+
+### Outputs
+- LoRA: `covaga/eplan-assistant-v2-lora`
+- Merged: `covaga/eplan-assistant-v2-merged`
+- Demo: `https://huggingface.co/spaces/covaga/eplan-assistant`
+
+### Lessons
+- Eval during training causes OOM on T4 — skip and evaluate manually
+- bf16 works on T4 but ~4x slower than fp16 (5.5h vs 67min)
+- TRL 0.29 broke many API params (max_seq_length, packing, warmup_ratio)
+- Kaggle environment is fragile — numpy/scipy/protobuf conflicts on every run
 
 ---
 
